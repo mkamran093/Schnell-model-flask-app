@@ -1,0 +1,214 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Logo Generator</title>
+    <style>
+        body {
+            font-family: 'Arial', sans-serif;
+            line-height: 1.6;
+            color: #333;
+            margin: 0;
+            padding: 20px;
+            background-color: #f4f4f4;
+        }
+        .container {
+            display: flex;
+            max-width: 1200px;
+            margin: 0 auto;
+            gap: 20px;
+        }
+        .form-container, .result-container {
+            flex: 1;
+            background-color: #ffffff;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 0 10px rgba(0,0,0,0.1);
+            max-height: 90vh;
+            overflow-y: auto;
+        }
+        h1 {
+            color: #2c3e50;
+            text-align: center;
+            margin-bottom: 20px;
+        }
+        form {
+            display: flex;
+            flex-direction: column;
+        }
+        label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: bold;
+            color: #2c3e50;
+        }
+        input[type="text"], textarea, select {
+            width: 100%;
+            padding: 8px;
+            margin-bottom: 15px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            box-sizing: border-box;
+        }
+        .field-description {
+            font-size: 0.9em;
+            color: #666;
+            margin-bottom: 5px;
+        }
+        input[type="submit"] {
+            background-color: #3498db;
+            color: white;
+            padding: 10px 15px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 16px;
+            transition: background-color 0.3s ease;
+        }
+        input[type="submit"]:hover {
+            background-color: #2980b9;
+        }
+        #result img {
+            max-width: 100%;
+            border-radius: 8px;
+            box-shadow: 0 0 10px rgba(0,0,0,0.1);
+        }
+        .error-message {
+            color: #e74c3c;
+            font-weight: bold;
+            text-align: center;
+            margin-top: 20px;
+        }
+        .loading {
+            display: none;
+            text-align: center;
+            font-weight: bold;
+            color: #3498db;
+            margin-top: 20px;
+        }
+        
+        .spinner {
+            border: 4px solid #f3f3f3;
+            border-top: 4px solid #3498db;
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            animation: spin 1s linear infinite;
+            margin: 20px auto;
+        }
+        
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="form-container">
+            <h1>Custom Logo Generator</h1>
+            <form id="logoForm" method="POST">
+                <label for="business_name">Business Name:</label>
+                <input type="text" id="business_name" name="business_name" required>
+
+                <label for="tagline">Tagline (if any):</label>
+                <input type="text" id="tagline" name="tagline">
+
+                <label for="business_type">Business Type/Industry:</label>
+                <input type="text" id="business_type" name="business_type" required>
+
+                <label for="target_audience">Target Audience:</label>
+                <input type="text" id="target_audience" name="target_audience" required>
+
+                <label for="color_preferences">Color Preferences:</label>
+                <input type="text" id="color_preferences" name="color_preferences">
+
+                <label for="style_preferences">Style Preferences:</label>
+                <select id="style_preferences" name="style_preferences">
+                    <option value="modern">Modern</option>
+                    <option value="vintage">Vintage</option>
+                    <option value="minimalist">Minimalist</option>
+                    <option value="playful">Playful</option>
+                </select>
+
+                <label for="imagery">Imagery:</label>
+                <div class="field-description">Are there specific symbols or images you want included? (e.g., animals, objects, shapes)</div>
+                <input type="text" id="imagery" name="imagery">
+
+                <label for="usage_context">Usage Context:</label>
+                <div class="field-description">Where will the logo primarily be used? (e.g., website, business cards, signage)</div>
+                <input type="text" id="usage_context" name="usage_context">
+
+                <label for="additional_notes">Additional Notes:</label>
+                <textarea id="additional_notes" name="additional_notes" rows="4"></textarea>
+
+                <input type="submit" value="Generate Logo">
+            </form>
+        </div>
+        <div class="result-container">
+            <h2>Generated Logo</h2>
+            <div id="loading" class="loading">
+                <div class="spinner"></div>
+                <p>Generating your logo...</p>
+            </div>
+            <div id="result"></div>
+        </div>
+    </div>
+
+    <script>
+        document.getElementById('logoForm').addEventListener('submit', function(e) {
+            e.preventDefault();
+            const form = e.target;
+            const formData = new FormData(form);
+
+            let prompt = ``;
+            prompt += `Business Name: ${formData.get('business_name')}\n`;
+            prompt += `Tagline: ${formData.get('tagline')}\n`;
+            prompt += `Business Type: ${formData.get('business_type')}\n`;
+            prompt += `Target Audience: ${formData.get('target_audience')}\n`;
+            prompt += `Color Preferences: ${formData.get('color_preferences')}\n`;
+            prompt += `Style: ${formData.get('style_preferences')}\n`;
+            prompt += `Imagery: ${formData.get('imagery')}\n`;
+            prompt += `Usage Context: ${formData.get('usage_context')}\n`;
+            prompt += `Additional Notes: ${formData.get('additional_notes')}`;
+
+            loading.style.display = 'block';
+            result.innerHTML = '';
+
+            fetch('/', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/x-www-form-urlencoded',
+                },
+                body: new URLSearchParams({prompt: prompt})
+            })
+            .then(response => {
+                if (!response.ok) {
+                    throw new Error('Network response was not ok');
+                }
+                return response.json();
+            })
+            .then(data => {
+
+                loading.style.display = 'none';
+
+                const result = document.getElementById('result');
+                if (data.success) {
+                    const img = document.createElement('img');
+                    img.src = data.image;
+                    result.innerHTML = '';
+                    result.appendChild(img);
+                } else {
+                    result.innerHTML = `<p class="error-message">${data.error}</p>`;
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                loading.style.display = 'none';
+                document.getElementById('result').innerHTML = '<p class="error-message">An error occurred. Please try again.</p>';
+            });
+        });
+    </script>
+</body>
+</html>
