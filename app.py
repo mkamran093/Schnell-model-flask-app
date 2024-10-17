@@ -39,6 +39,17 @@ def index():
             return jsonify({"success": False, "error": error_message})
     return render_template('index.html')
 
+@app.route('/submit_download', methods=['POST'])
+def submit_download():
+    data = request.json
+    name = data.get('name')
+    email = data.get('email')
+    
+    # Print the name and email to the terminal
+    print(colored(f"Download requested by: {name} ({email})", "green"))
+    
+    return jsonify({"message": "Download information received"})
+
 class isLogoRequest(BaseModel):
     isLogo: bool = Field(description="Check if the given details refer to a logo design or not. return a boolean value.")
 

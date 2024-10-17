@@ -8,10 +8,10 @@
         body {
             font-family: 'Arial', sans-serif;
             line-height: 1.6;
-            color: #333;
+            color: #ffffff;
             margin: 0;
             padding: 20px;
-            background-color: #f4f4f4;
+            background-color: #0f0f0f;
         }
         .container {
             display: flex;
@@ -21,15 +21,15 @@
         }
         .form-container, .result-container {
             flex: 1;
-            background-color: #ffffff;
+            background-color: #1a1a1a;
             padding: 20px;
             border-radius: 8px;
-            box-shadow: 0 0 10px rgba(0,0,0,0.1);
+            box-shadow: 0 0 10px rgba(0,0,0,0.3);
             max-height: 90vh;
             overflow-y: auto;
         }
-        h1 {
-            color: #2c3e50;
+        h1, h2 {
+            color: #ffffff;
             text-align: center;
             margin-bottom: 20px;
         }
@@ -41,23 +41,25 @@
             display: block;
             margin-bottom: 5px;
             font-weight: bold;
-            color: #2c3e50;
+            color: #ffffff;
         }
         input[type="text"], textarea, select {
             width: 100%;
             padding: 8px;
             margin-bottom: 15px;
-            border: 1px solid #ddd;
+            border: 1px solid #333333;
             border-radius: 4px;
             box-sizing: border-box;
+            background-color: #252525;
+            color: #ffffff;
         }
         .field-description {
             font-size: 0.9em;
-            color: #666;
+            color: #aaaaaa;
             margin-bottom: 5px;
         }
         input[type="submit"] {
-            background-color: #3498db;
+            background-color: #ff0000;
             color: white;
             padding: 10px 15px;
             border: none;
@@ -67,15 +69,15 @@
             transition: background-color 0.3s ease;
         }
         input[type="submit"]:hover {
-            background-color: #2980b9;
+            background-color: #cc0000;
         }
         #result img {
             max-width: 100%;
             border-radius: 8px;
-            box-shadow: 0 0 10px rgba(0,0,0,0.1);
+            box-shadow: 0 0 10px rgba(0,0,0,0.3);
         }
         .error-message {
-            color: #e74c3c;
+            color: #ff6666;
             font-weight: bold;
             text-align: center;
             margin-top: 20px;
@@ -84,23 +86,96 @@
             display: none;
             text-align: center;
             font-weight: bold;
-            color: #3498db;
+            color: #ffffff;
             margin-top: 20px;
         }
-        
         .spinner {
-            border: 4px solid #f3f3f3;
-            border-top: 4px solid #3498db;
+            border: 4px solid #333333;
+            border-top: 4px solid #ff0000;
             border-radius: 50%;
             width: 40px;
             height: 40px;
             animation: spin 1s linear infinite;
             margin: 20px auto;
         }
-        
         @keyframes spin {
             0% { transform: rotate(0deg); }
             100% { transform: rotate(360deg); }
+        }
+
+        .download-button {
+            background-color: #ff0000;
+            color: white;
+            padding: 10px 15px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 16px;
+            transition: background-color 0.3s ease;
+            margin-top: 20px;
+        }
+
+        .download-button:hover {
+            background-color: #cc0000;
+        }
+
+        .modal {
+            display: none;
+            position: fixed;
+            z-index: 1;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            overflow: auto;
+            background-color: rgba(0,0,0,0.4);
+        }
+
+        .modal-content {
+            background-color: #1a1a1a;
+            margin: 15% auto;
+            padding: 20px;
+            border: 1px solid #333333;
+            width: 80%;
+            max-width: 500px;
+            border-radius: 8px;
+        }
+
+        .close {
+            color: #aaa;
+            float: right;
+            font-size: 28px;
+            font-weight: bold;
+        }
+
+        .close:hover,
+        .close:focus {
+            color: #fff;
+            text-decoration: none;
+            cursor: pointer;
+        }
+
+        #downloadForm input[type="text"],
+        #downloadForm input[type="email"] {
+            width: 100%;
+            padding: 8px;
+            margin: 10px 0;
+            box-sizing: border-box;
+        }
+
+        #downloadForm input[type="submit"] {
+            background-color: #ff0000;
+            color: white;
+            padding: 10px 15px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 16px;
+            transition: background-color 0.3s ease;
+        }
+
+        #downloadForm input[type="submit"]:hover {
+            background-color: #cc0000;
         }
     </style>
 </head>
@@ -146,6 +221,7 @@
                 <input type="submit" value="Generate Logo">
             </form>
         </div>
+
         <div class="result-container">
             <h2>Generated Logo</h2>
             <div id="loading" class="loading">
@@ -153,6 +229,19 @@
                 <p>Generating your logo...</p>
             </div>
             <div id="result"></div>
+            <button id="downloadBtn" class="download-button" style="display: none;">Download Logo</button>
+        </div>
+
+        <div id="downloadModal" class="modal">
+            <div class="modal-content">
+                <span class="close">&times;</span>
+                <h2>Enter Your Details to Download</h2>
+                <form id="downloadForm">
+                    <input type="text" id="name" name="name" placeholder="Your Name" required>
+                    <input type="email" id="email" name="email" placeholder="Your Email" required>
+                    <input type="submit" value="Download">
+                </form>
+            </div>
         </div>
     </div>
 
@@ -161,6 +250,14 @@
             e.preventDefault();
             const form = e.target;
             const formData = new FormData(form);
+            const loading = document.getElementById('loading');
+            const result = document.getElementById('result');
+            const downloadBtn = document.getElementById('downloadBtn');
+
+            // Show loading indicator
+            loading.style.display = 'block';
+            result.innerHTML = '';
+            downloadBtn.style.display = 'none';
 
             let prompt = ``;
             prompt += `Business Name: ${formData.get('business_name')}\n`;
@@ -173,8 +270,6 @@
             prompt += `Usage Context: ${formData.get('usage_context')}\n`;
             prompt += `Additional Notes: ${formData.get('additional_notes')}`;
 
-            loading.style.display = 'block';
-            result.innerHTML = '';
 
             fetch('/', {
                 method: 'POST',
@@ -190,25 +285,135 @@
                 return response.json();
             })
             .then(data => {
-
+                console.log('Received data:', data);  // Log the received data
                 loading.style.display = 'none';
-
-                const result = document.getElementById('result');
+                
                 if (data.success) {
+                    console.log('Image URL:', data.image);  // Log the image URL
                     const img = document.createElement('img');
                     img.src = data.image;
-                    result.innerHTML = '';
-                    result.appendChild(img);
+                    img.onload = function() {
+                        console.log('Image loaded successfully');
+                        result.innerHTML = '';
+                        result.appendChild(img);
+                        downloadBtn.style.display = 'block';
+                    };
+                    img.onerror = function() {
+                        console.error('Error loading image');
+                        result.innerHTML = '<p class="error-message">Error loading image. Please try again.</p>';
+                    };
                 } else {
+                    console.error('Error:', data.error);
                     result.innerHTML = `<p class="error-message">${data.error}</p>`;
                 }
             })
             .catch(error => {
                 console.error('Error:', error);
                 loading.style.display = 'none';
-                document.getElementById('result').innerHTML = '<p class="error-message">An error occurred. Please try again.</p>';
+                result.innerHTML = '<p class="error-message">An error occurred. Please try again.</p>';
             });
         });
+
+        document.getElementById('downloadForm').onsubmit = function(e) {
+            e.preventDefault();
+            const name = document.getElementById('name').value;
+            const email = document.getElementById('email').value;
+            
+            // Send the name and email to the server
+            fetch('/submit_download', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({ name: name, email: email })
+            })
+            .then(response => response.json())
+            .then(data => {
+                console.log(data.message);
+                // Trigger the download
+                if (imageBlob) {
+                    const link = document.createElement('a');
+                    link.href = URL.createObjectURL(imageBlob);
+                    link.download = 'generated_logo.png';
+                    document.body.appendChild(link);
+                    link.click();
+                    document.body.removeChild(link);
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+            });
+
+            modal.style.display = "none";
+        }
+
+        // Prevent right-click on the image
+        document.addEventListener('contextmenu', function(e) {
+            if (e.target.tagName === 'IMG') {
+                e.preventDefault();
+            }
+        });
+
+        // Download button logic
+        let imageBlob = null;
+        const downloadBtn = document.getElementById('downloadBtn');
+        const modal = document.getElementById('downloadModal');
+        const closeBtn = document.getElementsByClassName('close')[0];
+
+        downloadBtn.onclick = function() {
+            modal.style.display = "block";
+        }
+
+        closeBtn.onclick = function() {
+            modal.style.display = "none";
+        }
+
+        window.onclick = function(event) {
+            if (event.target == modal) {
+                modal.style.display = "none";
+            }
+        }
+
+        document.getElementById('downloadForm').onsubmit = function(e) {
+            e.preventDefault();
+            const name = document.getElementById('name').value;
+            const email = document.getElementById('email').value;
+            
+            // Here you would typically send the name and email to your server
+            console.log(`Name: ${name}, Email: ${email}`);
+
+            // Trigger the download
+            if (imageBlob) {
+                const link = document.createElement('a');
+                link.href = URL.createObjectURL(imageBlob);
+                link.download = 'generated_logo.png';
+                document.body.appendChild(link);
+                link.click();
+                document.body.removeChild(link);
+            }
+
+            modal.style.display = "none";
+        }
+
+        // Modify the existing fetch response handling
+        .then(data => {
+            const result = document.getElementById('result');
+            if (data.success) {
+                fetch(data.image)
+                    .then(res => res.blob())
+                    .then(blob => {
+                        imageBlob = blob;
+                        const img = document.createElement('img');
+                        img.src = URL.createObjectURL(blob);
+                        result.innerHTML = '';
+                        result.appendChild(img);
+                        downloadBtn.style.display = 'block';
+                    });
+            } else {
+                result.innerHTML = `<p class="error-message">${data.error}</p>`;
+                downloadBtn.style.display = 'none';
+            }
+        })
     </script>
 </body>
 </html>
