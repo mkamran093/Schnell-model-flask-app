@@ -1,7 +1,4 @@
-import io
 import os
-import sys
-import base64
 import logging
 import replicate
 from PIL import Image
@@ -15,7 +12,7 @@ from googleapiclient.errors import HttpError
 from google.oauth2.credentials import Credentials
 from google.auth.transport.requests import Request
 from google_auth_oauthlib.flow import InstalledAppFlow
-from flask import Flask, render_template, request, send_file, jsonify
+from flask import Flask, render_template, request, jsonify
 
 # Setup logger
 logger = logging.getLogger()
@@ -43,12 +40,9 @@ def index():
         if is_logo:
             # generate a prompt for this info
             new_prompt = create_prompt(prompt)
+
             try:
-                output = replicate.run(
-                    "black-forest-labs/flux-schnell",
-                    input={"prompt": new_prompt},
-                )
-                base64_string = str(output[0])
+                base64_string = generate_logo(new_prompt, extract_business_name(prompt))
                 return jsonify({"success": True, "image": base64_string})
             except Exception as e:
                 print(f"Error generating image: {e}")
@@ -88,7 +82,6 @@ def store_in_sheets(name, phone, email):
     except Exception as e:
         logger.error(f"An error occurred while updating Google Sheets: {e}")
     
-
 def get_google_sheets_service(force_new_token=False):
     creds = None
     if os.path.exists('token.json') and not force_new_token:
@@ -133,6 +126,9 @@ def get_google_sheets_service(force_new_token=False):
             return get_google_sheets_service(force_new_token=True)
         raise
 
+class logoQualityRequest(BaseModel):
+    correct: bool = Field(description="Check if the generated logo matches the given description. return a boolean value.")
+
 class isLogoRequest(BaseModel):
     isLogo: bool = Field(description="Check if the given details refer to a logo design or not. return a boolean value.")
 
@@ -141,7 +137,7 @@ class createPromptRequest(BaseModel):
 
 def create_prompt(prompt):
     print(colored("Creating a prompt for the given details...", color="blue"))
-    system_prompt = "You will receive a set of information related to a business or design request. Your task is to create a detailed and specific prompt for a text-to-image model to generate a logo design. Ensure that the prompt focuses solely on generating logo designs relevant to the provided information."
+    system_prompt = "You will receive a set of information related to a business or design request. Your task is to create a detailed, descriptive and specific prompt for a text-to-image model to generate a logo design. Ensure that the prompt focuses solely on generating logo designs relevant to the provided information."
 
     user_prompt = (
         f"Here are the details: {prompt}."
@@ -188,6 +184,61 @@ def isLogo(prompt):
     except Exception as e:
         print(f"Error calling OpenAI API: {e}")
         return False
+
+def extract_business_name(prompt):
+    lines = prompt.splitlines()
+    for line in lines:
+        if line.startswith("Business Name:"):
+            return line.split(":", 1)[1].strip()
+    return ""
+        
+def check_logo_quality(image, prompt):
+    print(colored("Checking if the image is related to the given details...", color="blue"))
+    system_prompt = "You will receive an image and a business name. Your task is to analyze the image to determine if the business name is correctly spelled in the logo. If the logo does not include the complete business name, verify that each letter is shaped correctly and represents the intended letter. Additionally, assess whether the overall logo is relevant to the business name. Return 'True' if the image aligns with these criteria, and 'False' if it does not."
+    user_prompt = (
+        f"Image: {image}.\n"  # image is a base64 string
+        f"Here is the generated image based on the details: {prompt}.\n"
+        "Please analyze this image and respond with 'True' or 'False' based on whether it matches the provided business name."
+    )
+
+    try:
+        response = client.beta.chat.completions.parse(
+            model="gpt-4o",
+            messages=[
+                {"role": "system", "content": system_prompt},
+                {"role": "user", "content": user_prompt}
+            ],
+            response_format=logoQualityRequest,        
+        )
+        result = response.choices[0].message.parsed
+
+        if result.correct:
+            print(colored("The image matches the description provided.", color="green"))
+            return True
+        else:
+            print(colored("The image does not match the description provided.", color="red"))
+            return False
+    except Exception as e:
+        print(colored(f"An Error Occured: {e}"), color="red")
+        return "None"
+
+def generate_logo(prompt, name=''):
+    print(colored("Generating a logo based on the provided details...", color="blue"))
+
+    for i in range(5):
+        try:
+            response = replicate.run(
+                "black-forest-labs/flux-schnell",
+                input={"prompt": prompt},
+            )
+            image = str(response[0])
+        except Exception as e:
+            print(colored(f"Error generating image: {e}", color="red"))
+            return "None"
+        
+        if check_logo_quality(image, name):
+            return image
+    return image
 
 if __name__ == '__main__':
     app.run(debug=True)
