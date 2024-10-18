@@ -318,7 +318,6 @@
             e.preventDefault();
             const name = document.getElementById('name').value;
             const email = document.getElementById('email').value;
-            
             // Send the name and email to the server
             fetch('/submit_download', {
                 method: 'POST',
@@ -331,20 +330,34 @@
             .then(data => {
                 console.log(data.message);
                 // Trigger the download
-                if (imageBlob) {
-                    const link = document.createElement('a');
-                    link.href = URL.createObjectURL(imageBlob);
-                    link.download = 'generated_logo.png';
-                    document.body.appendChild(link);
-                    link.click();
-                    document.body.removeChild(link);
-                }
+                downloadImage();
             })
             .catch(error => {
                 console.error('Error:', error);
             });
 
             modal.style.display = "none";
+        }
+        
+        function downloadImage() {
+            const img = document.querySelector('#result img');
+            if (img) {
+                fetch(img.src)
+                    .then(response => response.blob())
+                    .then(blob => {
+                        const url = window.URL.createObjectURL(blob);
+                        const link = document.createElement('a');
+                        link.href = url;
+                        link.download = 'generated_logo.png';
+                        document.body.appendChild(link);
+                        link.click();
+                        document.body.removeChild(link);
+                        window.URL.revokeObjectURL(url);
+                    })
+                    .catch(error => console.error('Error downloading image:', error));
+            } else {
+                console.error('No image found to download');
+            }
         }
 
         // Prevent right-click on the image
