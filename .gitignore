@@ -1,3 +1,5 @@
 .env
 main.ipynb
 main.py
+credentials.json
+token.json

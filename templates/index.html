@@ -4,6 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Logo Generator</title>
+    <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='.9em' font-size='90'%3E🎨%3C/text%3E%3C/svg%3E">
     <style>
         body {
             font-family: 'Arial', sans-serif;
@@ -238,6 +239,7 @@
                 <h2>Enter Your Details to Download</h2>
                 <form id="downloadForm">
                     <input type="text" id="name" name="name" placeholder="Your Name" required>
+                    <input type="tel" id="phone" name="phone" placeholder="Your Phone Number" required>
                     <input type="email" id="email" name="email" placeholder="Your Email" required>
                     <input type="submit" value="Download">
                 </form>
@@ -317,6 +319,7 @@
         document.getElementById('downloadForm').onsubmit = function(e) {
             e.preventDefault();
             const name = document.getElementById('name').value;
+            const phone = document.getElementById('phone').value;
             const email = document.getElementById('email').value;
             // Send the name and email to the server
             fetch('/submit_download', {
@@ -324,7 +327,7 @@
                 headers: {
                     'Content-Type': 'application/json',
                 },
-                body: JSON.stringify({ name: name, email: email })
+                body: JSON.stringify({ name: name, phone: phone, email: email })
             })
             .then(response => response.json())
             .then(data => {

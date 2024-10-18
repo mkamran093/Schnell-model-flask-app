@@ -1,15 +1,34 @@
 import io
 import os
+import sys
 import base64
+import logging
 import replicate
 from PIL import Image
 from openai import OpenAI
 from termcolor import colored
 from dotenv import load_dotenv
+from httplib2 import Credentials
 from pydantic import BaseModel, Field
+from googleapiclient.discovery import build
+from googleapiclient.errors import HttpError
+from google.oauth2.credentials import Credentials
+from google.auth.transport.requests import Request
+from google_auth_oauthlib.flow import InstalledAppFlow
 from flask import Flask, render_template, request, send_file, jsonify
 
+# Setup logger
+logger = logging.getLogger()
+logger.setLevel(logging.INFO)
+
+
+# Load environment variables
 load_dotenv()
+
+# Initialize sheets client
+SCOPES = ['https://www.googleapis.com/auth/spreadsheets']
+SPREADSHEET_ID = '1JTZt9e3hOH7QNe4dOxAs1RXetUOJ-ir6L9ucdGCflLQ'
+SHEET_NAME = 'Sheet1'
 
 # Initialize OpenAI API client
 client = OpenAI(api_key=os.environ.get("OPENAI_API_KEY"))
@@ -43,12 +62,76 @@ def index():
 def submit_download():
     data = request.json
     name = data.get('name')
+    phone = data.get('phone')
     email = data.get('email')
     
     # Print the name and email to the terminal
-    print(colored(f"Download requested by: {name} ({email})", "green"))
-    
+    print(colored(f"Download requested by: {name} ({phone} - {email})", "green"))
+    store_in_sheets(name, phone, email)
     return jsonify({"message": "Download information received"})
+
+def store_in_sheets(name, phone, email):
+    service = get_google_sheets_service()
+    try:
+        values = [name, phone, email]
+        body = {'values': [values]}
+        result = service.spreadsheets().values().append(
+            spreadsheetId=SPREADSHEET_ID,
+            range=f"Sheet1!A:D",
+            valueInputOption='RAW',
+            insertDataOption='INSERT_ROWS',
+            body=body).execute()
+        updated_cells = result.get('updates', {}).get('updatedCells', 0)
+        logger.info(f"Updated {updated_cells} cells in Google Sheets")
+    except HttpError as e:
+        logger.error(f"HttpError occurred while updating Google Sheets: {e}")
+    except Exception as e:
+        logger.error(f"An error occurred while updating Google Sheets: {e}")
+    
+
+def get_google_sheets_service(force_new_token=False):
+    creds = None
+    if os.path.exists('token.json') and not force_new_token:
+        try:
+            creds = Credentials.from_authorized_user_file('token.json', SCOPES)
+        except Exception as e:
+            logger.error(f"Error reading token.json: {str(e)}")
+            os.remove('token.json')
+            logger.info("Removed invalid token.json file")
+
+    if not creds or not creds.valid or force_new_token:
+        if creds and creds.expired and creds.refresh_token and not force_new_token:
+            try:
+                creds.refresh(Request())
+                logger.info("Successfully refreshed the token")
+            except Exception as e:
+                logger.error(f"Error refreshing credentials: {str(e)}")
+                creds = None
+
+        if not creds:
+            try:
+                flow = InstalledAppFlow.from_client_secrets_file(
+                    'credentials.json', SCOPES)
+                creds = flow.run_local_server(port=0)
+                logger.info("Generated new token through authorization flow")
+            except Exception as e:
+                logger.error(f"Error in authorization flow: {str(e)}")
+                raise
+
+        with open('token.json', 'w') as token:
+            token.write(creds.to_json())
+            logger.info("Saved new token.json file")
+
+    try:
+        service = build('sheets', 'v4', credentials=creds)
+        logger.info("Successfully created Google Sheets service")
+        return service
+    except HttpError as error:
+        logger.error(f"An error occurred while building the service: {error}")
+        if "invalid_grant" in str(error) or "invalid_scope" in str(error):
+            logger.info("Token seems to be invalid. Attempting to generate a new one.")
+            return get_google_sheets_service(force_new_token=True)
+        raise
 
 class isLogoRequest(BaseModel):
     isLogo: bool = Field(description="Check if the given details refer to a logo design or not. return a boolean value.")
